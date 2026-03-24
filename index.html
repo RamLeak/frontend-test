@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Case</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #1a1a2e; color: #fff; overflow: hidden; }
+        
+        /* Локаут скрин */
+        #lock-screen { display: flex; flex-direction: column; align-items: center; transition: opacity 0.5s ease, transform 0.5s ease; }
+        #pin-dots { font-size: 32px; letter-spacing: 15px; margin-bottom: 30px; height: 40px; color: #e94560; font-weight: bold; }
+        .pin-pad { display: grid; grid-template-columns: repeat(3, 80px); gap: 15px; }
+        .pin-btn { width: 80px; height: 80px; border-radius: 50%; border: 2px solid #e94560; background: transparent; color: white; font-size: 28px; cursor: pointer; transition: background 0.1s, transform 0.1s; }
+        .pin-btn:active { background: rgba(233, 69, 96, 0.3); transform: scale(0.9); }
+        .pin-btn.clear { font-size: 20px; color: #aaa; border-color: #aaa; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+        .error-shake { animation: shake 0.4s; color: red !important; }
+
+        /* Приложение */
+        #app-screen { display: none; flex-direction: column; align-items: center; text-align: center; opacity: 0; transition: opacity 0.8s ease; }
+        #btn-rescue { padding: 20px 40px; font-size: 24px; font-weight: bold; color: white; background: #e94560; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4); transition: transform 0.1s; }
+        #btn-rescue:active { transform: scale(0.95); }
+        #content-display { margin-top: 30px; max-width: 80%; min-height: 250px; display: flex; flex-direction: column; align-items: center;}
+        .rarity-label { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; padding: 5px 10px; border-radius: 5px; display: none;}
+        .common { background: #555; color: #fff; } .rare { background: #0f3460; color: #43dde6; } .legendary { background: #ffd700; color: #000; box-shadow: 0 0 10px #ffd700; }
+        .media-item { display: none; max-width: 100%; margin-top: 15px; }
+        img.media-item { border-radius: 15px; max-height: 400px; }
+        video.media-item { width: 250px; height: 250px; border-radius: 50%; object-fit: cover; border: 4px solid #e94560; }
+    </style>
+</head>
+<body>
+
+    <div id="lock-screen">
+        <h2>Введите дату (ДДММГГГГ)</h2>
+        <div id="pin-dots"></div>
+        <div class="pin-pad" id="pin-pad">
+            <button class="pin-btn" data-val="1">1</button>
+            <button class="pin-btn" data-val="2">2</button>
+            <button class="pin-btn" data-val="3">3</button>
+            <button class="pin-btn" data-val="4">4</button>
+            <button class="pin-btn" data-val="5">5</button>
+            <button class="pin-btn" data-val="6">6</button>
+            <button class="pin-btn" data-val="7">7</button>
+            <button class="pin-btn" data-val="8">8</button>
+            <button class="pin-btn" data-val="9">9</button>
+            <button class="pin-btn clear" data-val="clear">C</button>
+            <button class="pin-btn" data-val="0">0</button>
+            <div style="width: 80px;"></div>
+        </div>
+    </div>
+
+    <div id="app-screen">
+        <button id="btn-rescue">Открыть кейс</button>
+        <div id="content-display">
+            <div id="rarity-badge" class="rarity-label"></div>
+            <p id="message-text">Доступ разрешен.</p>
+            <img id="media-img" class="media-item" src="" alt="Фото">
+            <audio id="media-audio" class="media-item" controls></audio>
+            <video id="media-video" class="media-item" controls autoplay loop muted></video>
+        </div>
+    </div>
+
+    <script>
+        // ВСТАВЬ СЮДА СТРОКУ ИЗ ШИФРОВАЛЬЩИКА:
+        const encryptedDB = "U2FsdGVkX18zbWmgPTZ/aieD8coYweo7LsOTipOy/5ShXvEAYRW7KM12oz8hIyN1W8+ovpHFiq85sJTKSRoczezshY57SLt1+H0ifJhHQnqTs1D+OFPagyWKgcVfOn3Uny4b3H+jzu62UejtQMQ3ru2wNjzEVPFWW5kUseRXxgf89N0b0v2V2owbr2hGUee3SNEE7y7mLde1iZwno/4bxKhNlj9zn0GsG8CEk2FQ0bvhP0keIzcpah8H9AC4rUC3EpACG4VWjzJXUn7PxCZPR6omjBPzzKO4A7Ah4iFaiiwelxjWTjwBqSkEWN8uUo/bdZUVzH1C8DTUruucAgaoieMoUJBNeZPIB8Yrmzw8lKlbNf0wSi+e+6P622uHf+SKqIQfeb8sLX2pNIDg8okco2GNgyUJaXsVkIN9bGtuWpREnpvK2b+GG7boAGIudH7E/M0poKkoJ8AElwCl3jsBmIkI156nMmII+CRk1iQf+LSI+1SNUVAhhb1r6ZLJADfX9+dIeTmS87LhDOKjxrOZs4ruvf8kaU3CF4fLQDh2NaSwuZRuuqEVCUmcgo54MV+H"; 
+        
+        // Переменные состояния
+        let currentPin = "";
+        let originalDecks = {};
+        let activeDecks = {};
+
+        const pinDots = document.getElementById('pin-dots');
+        const lockScreen = document.getElementById('lock-screen');
+        const appScreen = document.getElementById('app-screen');
+
+        // Логика ввода ПИН-кода (Event Delegation)
+        document.getElementById('pin-pad').addEventListener('click', (e) => {
+            if (!e.target.classList.contains('pin-btn')) return;
+            const val = e.target.getAttribute('data-val');
+
+            if (val === 'clear') currentPin = "";
+            else if (currentPin.length < 8) currentPin += val;
+
+            pinDots.innerText = '•'.repeat(currentPin.length);
+
+            if (currentPin.length === 8) attemptUnlock();
+        });
+
+        // Криптографическая проверка доступа
+        function attemptUnlock() {
+            try {
+                // Пытаемся расшифровать базу введенным ПИНом
+                const bytes = CryptoJS.AES.decrypt(encryptedDB, currentPin);
+                const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+                
+                // Если расшифровка выдала пустую строку — ПИН неверный
+                if (!decryptedStr) throw new Error("Wrong PIN");
+
+                const db = JSON.parse(decryptedStr); // Парсим чистый JSON
+                
+                // Успех! Инициализируем колоды (Shuffle Bags)
+                initDecks(db);
+
+                // Анимация разблокировки
+                lockScreen.style.transform = 'scale(1.5)';
+                lockScreen.style.opacity = '0';
+                setTimeout(() => {
+                    lockScreen.style.display = 'none';
+                    appScreen.style.display = 'flex';
+                    setTimeout(() => appScreen.style.opacity = '1', 50);
+                }, 500);
+
+            } catch (error) {
+                // ПИН неверный (хэш не сошелся)
+                pinDots.classList.add('error-shake');
+                setTimeout(() => {
+                    pinDots.classList.remove('error-shake');
+                    currentPin = "";
+                    pinDots.innerText = "";
+                }, 400);
+            }
+        }
+
+        // Подготовка колод для алгоритма Gacha
+        function initDecks(database) {
+            originalDecks = {
+                common: database.filter(i => i.rarity === 'common'),
+                rare: database.filter(i => i.rarity === 'rare'),
+                legendary: database.filter(i => i.rarity === 'legendary')
+            };
+            activeDecks = {
+                common: [...originalDecks.common],
+                rare: [...originalDecks.rare],
+                legendary: [...originalDecks.legendary]
+            };
+        }
+
+        // Логика нажатия на "Открыть кейс"
+        document.getElementById('btn-rescue').addEventListener('click', () => {
+            const roll = Math.random() * 100;
+            let rolledRarity = 'common';
+
+            // Проверка на наличие ассетов (Fail-Safe)
+            if (roll > 95 && originalDecks.legendary.length > 0) rolledRarity = 'legendary';
+            else if (roll > 70 && originalDecks.rare.length > 0) rolledRarity = 'rare';
+
+            // Перезарядка пустой колоды
+            if (activeDecks[rolledRarity].length === 0) {
+                activeDecks[rolledRarity] = [...originalDecks[rolledRarity]];
+            }
+
+            const randomIndex = Math.floor(Math.random() * activeDecks[rolledRarity].length);
+            const drop = activeDecks[rolledRarity][randomIndex];
+            
+            // Удаляем карту из активной колоды, чтобы избежать повторов
+            activeDecks[rolledRarity].splice(randomIndex, 1);
+
+            renderDrop(drop, rolledRarity);
+        });
+
+        // Отрисовка контента
+        function renderDrop(drop, rarity) {
+            document.querySelectorAll('.media-item').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('audio, video').forEach(el => el.pause());
+
+            document.getElementById('message-text').innerText = drop.content;
+            
+            const badge = document.getElementById('rarity-badge');
+            badge.className = `rarity-label ${rarity}`;
+            badge.innerText = rarity;
+            badge.style.display = 'inline-block';
+
+            if (drop.type === 'image') {
+                const img = document.getElementById('media-img');
+                img.src = drop.url; img.style.display = 'block';
+            } else if (drop.type === 'audio') {
+                const audio = document.getElementById('media-audio');
+                audio.src = drop.url; audio.style.display = 'block';
+                audio.play().catch(() => {}); 
+            } else if (drop.type === 'video') {
+                const video = document.getElementById('media-video');
+                video.src = drop.url; video.style.display = 'block';
+                video.muted = false; video.play().catch(() => {});
+            }
+        }
+    </script>
+</body>
+</html>
