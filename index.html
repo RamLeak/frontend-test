@@ -4,170 +4,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emergency Case</title>
+    <title>Emergency Case v1.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --text-color: #e9e9e9;
+            --accent-color: #e94560;
+            --rarity-common: #a0a0a0;
+            --rarity-rare: #3498db;
+            --rarity-legendary: #f1c40f;
+            --panel-bg: rgba(255, 255, 255, 0.05);
+        }
+
         body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             height: 100vh;
             margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #1a1a2e;
-            color: #fff;
             overflow: hidden;
         }
 
-        /* Локаут скрин */
-        #lock-screen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: opacity 0.5s ease, transform 0.5s ease;
+        #app {
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
         }
 
-        #pin-dots {
-            font-size: 32px;
-            letter-spacing: 15px;
-            margin-bottom: 30px;
-            height: 40px;
-            color: #e94560;
-            font-weight: bold;
+        /* --- UI FIX: Увеличиваем основные шрифты --- */
+        #main-content {
+            font-size: 1.3rem;
+        }
+
+        #lock-screen h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        /* --- ЭКРАН БЛОКИРОВКИ --- */
+        #lock-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+
+        #lock-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
 
         .pin-pad {
             display: grid;
-            grid-template-columns: repeat(3, 80px);
+            grid-template-columns: repeat(3, 1fr);
             gap: 15px;
+            margin-top: 20px;
         }
 
         .pin-btn {
-            width: 80px;
-            height: 80px;
+            background: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            font-size: 1.5rem;
+            padding: 20px;
             border-radius: 50%;
-            border: 2px solid #e94560;
-            background: transparent;
-            color: white;
-            font-size: 28px;
             cursor: pointer;
-            transition: background 0.1s, transform 0.1s;
+            width: 70px;
+            height: 70px;
+            transition: background 0.2s;
         }
 
         .pin-btn:active {
-            background: rgba(233, 69, 96, 0.3);
-            transform: scale(0.9);
+            background: rgba(255, 255, 255, 0.2);
         }
 
-        .pin-btn.clear {
-            font-size: 20px;
-            color: #aaa;
-            border-color: #aaa;
+        #pin-display {
+            font-size: 2rem;
+            letter-spacing: 10px;
+            margin-bottom: 20px;
+            height: 2.5rem;
         }
 
-        @keyframes shake {
-
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-
-            20%,
-            60% {
-                transform: translateX(-10px);
-            }
-
-            40%,
-            80% {
-                transform: translateX(10px);
-            }
-        }
-
-        .error-shake {
-            animation: shake 0.4s;
-            color: red !important;
-        }
-
-        /* Приложение */
-        #app-screen {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
+        /* --- ОСНОВНОЙ КОНТЕНТ --- */
+        #main-content {
             opacity: 0;
-            transition: opacity 0.8s ease;
+            transition: opacity 0.5s ease;
         }
 
-        #btn-rescue {
-            padding: 20px 40px;
-            font-size: 24px;
-            font-weight: bold;
+        #main-content.visible {
+            opacity: 1;
+        }
+
+        .action-btn {
+            background-color: var(--accent-color);
             color: white;
-            background: #e94560;
             border: none;
-            border-radius: 50px;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 30px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
             transition: transform 0.1s;
+            margin-bottom: 30px;
         }
 
-        #btn-rescue:active {
-            transform: scale(0.95);
+        .action-btn:active {
+            transform: translateY(2px);
         }
 
-        #content-display {
-            margin-top: 30px;
-            max-width: 80%;
-            min-height: 250px;
+        /* --- ВЫВОД ДРОПА (Gacha) --- */
+        #drop-area {
+            min-height: 200px;
+            margin-top: 20px;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
         }
 
-        .rarity-label {
-            font-size: 14px;
+        .rarity-tag {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
             font-weight: bold;
-            text-transform: uppercase;
+            font-size: 0.9rem;
             margin-bottom: 10px;
-            padding: 5px 10px;
-            border-radius: 5px;
-            display: none;
+            text-transform: uppercase;
+            box-shadow: 0 0 10px currentColor;
         }
 
-        .common {
-            background: #555;
-            color: #fff;
+        /* --- UI FIX: Делаем выводимый текст ОЧЕНЬ крупным --- */
+        .drop-text {
+            font-size: 2.2rem;
+            /* Огромный шрифт */
+            line-height: 1.3;
+            font-weight: 500;
+            margin: 20px 0;
+            color: var(--text-color);
+            padding: 10px;
         }
 
-        .rare {
-            background: #0f3460;
-            color: #43dde6;
-        }
-
-        .legendary {
-            background: #ffd700;
-            color: #000;
-            box-shadow: 0 0 10px #ffd700;
-        }
-
-        .media-item {
-            display: none;
-            max-width: 100%;
+        /* Уменьшаем шрифт для медиа-контейнеров, чтобы они влезали */
+        .media-container {
             margin-top: 15px;
+            width: 100%;
         }
 
-        img.media-item {
-            border-radius: 15px;
-            max-height: 400px;
+        audio,
+        video {
+            width: 100%;
+            border-radius: 8px;
+            outline: none;
         }
 
-        video.media-item {
-            width: 250px;
-            height: 250px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid #e94560;
+        img {
+            width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
     </style>
 </head>
@@ -175,156 +180,206 @@
 <body>
 
     <div id="lock-screen">
-        <h2>Введите дату (ДДММГГГГ)</h2>
-        <div id="pin-dots"></div>
-        <div class="pin-pad" id="pin-pad">
-            <button class="pin-btn" data-val="1">1</button>
-            <button class="pin-btn" data-val="2">2</button>
-            <button class="pin-btn" data-val="3">3</button>
-            <button class="pin-btn" data-val="4">4</button>
-            <button class="pin-btn" data-val="5">5</button>
-            <button class="pin-btn" data-val="6">6</button>
-            <button class="pin-btn" data-val="7">7</button>
-            <button class="pin-btn" data-val="8">8</button>
-            <button class="pin-btn" data-val="9">9</button>
-            <button class="pin-btn clear" data-val="clear">C</button>
-            <button class="pin-btn" data-val="0">0</button>
-            <div style="width: 80px;"></div>
+        <h2>Введи наш ПИН-код</h2>
+        <div id="pin-display"></div>
+        <div class="pin-pad">
+            <button class="pin-btn" onclick="addPin('1')">1</button>
+            <button class="pin-btn" onclick="addPin('2')">2</button>
+            <button class="pin-btn" onclick="addPin('3')">3</button>
+            <button class="pin-btn" onclick="addPin('4')">4</button>
+            <button class="pin-btn" onclick="addPin('5')">5</button>
+            <button class="pin-btn" onclick="addPin('6')">6</button>
+            <button class="pin-btn" onclick="addPin('7')">7</button>
+            <button class="pin-btn" onclick="addPin('8')">8</button>
+            <button class="pin-btn" onclick="addPin('9')">9</button>
+            <div></div>
+            <button class="pin-btn" onclick="addPin('0')">0</button>
+            <button class="pin-btn" style="color: var(--accent-color)" onclick="clearPin()">X</button>
         </div>
     </div>
 
-    <div id="app-screen">
-        <button id="btn-rescue">Открыть кейс</button>
-        <div id="content-display">
-            <div id="rarity-badge" class="rarity-label"></div>
-            <p id="message-text">Доступ разрешен.</p>
-            <img id="media-img" class="media-item" src="" alt="Фото">
-            <audio id="media-audio" class="media-item" controls></audio>
-            <video id="media-video" class="media-item" controls autoplay loop muted></video>
+    <div id="app">
+        <div id="main-content">
+            <button class="action-btn" onclick="openCase()">Открыть кейс</button>
+            <div id="drop-area">
+            </div>
         </div>
     </div>
 
     <script>
-        // ВСТАВЬ СЮДА СТРОКУ ИЗ ШИФРОВАЛЬЩИКА:
-        const encryptedDB = "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";
+        // --- КОНФИГУРАЦИЯ ---
+        const EXPECTED_PIN = "31012026"; // Дата начала отношений
 
-        // Переменные состояния
+        // ВСТАВЬ СЮДА ЗАШИФРОВАННУЮ СТРОКУ ИЗ ENCRYPTOR.HTML
+        const encryptedDB = "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";
+
+        // Глобальные переменные для базы данных
+        let database = [];
+        let commonPool = [];
+        let rarePool = [];
+        let legendaryPool = [];
+
+        // --- ГАЧА-ЛОГИКА: ПЕРЕМЕННЫЕ ГАРАНТА (PITY) ---
+        let commonStreakCount = 0; // Счётчик выпадений Common подряд
+
+        // --- ЛОГИКА ПИН-КОДА ---
         let currentPin = "";
-        let originalDecks = {};
-        let activeDecks = {};
+        const pinDisplay = document.getElementById('pin-display');
 
-        const pinDots = document.getElementById('pin-dots');
-        const lockScreen = document.getElementById('lock-screen');
-        const appScreen = document.getElementById('app-screen');
+        function updatePinDisplay() {
+            pinDisplay.textContent = "*".repeat(currentPin.length);
+        }
 
-        // Логика ввода ПИН-кода (Event Delegation)
-        document.getElementById('pin-pad').addEventListener('click', (e) => {
-            if (!e.target.classList.contains('pin-btn')) return;
-            const val = e.target.getAttribute('data-val');
+        function addPin(num) {
+            if (currentPin.length < EXPECTED_PIN.length) {
+                currentPin += num;
+                updatePinDisplay();
+                if (currentPin.length === EXPECTED_PIN.length) {
+                    checkPin();
+                }
+            }
+        }
 
-            if (val === 'clear') currentPin = "";
-            else if (currentPin.length < 8) currentPin += val;
+        function clearPin() {
+            currentPin = "";
+            updatePinDisplay();
+        }
 
-            pinDots.innerText = '•'.repeat(currentPin.length);
+        function checkPin() {
+            if (currentPin === EXPECTED_PIN) {
+                if (decryptData()) {
+                    document.getElementById('lock-screen').classList.add('hidden');
+                    document.getElementById('main-content').classList.add('visible');
+                } else {
+                    alert("Ошибка дешифровки данных. Проверь код.");
+                    clearPin();
+                }
+            } else {
+                alert("Неверный ПИН-код. Попробуй ещё раз.");
+                clearPin();
+            }
+        }
 
-            if (currentPin.length === 8) attemptUnlock();
-        });
-
-        // Криптографическая проверка доступа
-        function attemptUnlock() {
+        // --- ЛОГИКА ДЕШИФРОВКИ ---
+        function decryptData() {
             try {
-                // Пытаемся расшифровать базу введенным ПИНом
-                const bytes = CryptoJS.AES.decrypt(encryptedDB, currentPin);
-                const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+                const bytes = CryptoJS.AES.decrypt(encryptedDB, EXPECTED_PIN);
+                const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+                if (!decryptedText) return false;
 
-                // Если расшифровка выдала пустую строку — ПИН неверный
-                if (!decryptedStr) throw new Error("Wrong PIN");
-
-                const db = JSON.parse(decryptedStr); // Парсим чистый JSON
-
-                // Успех! Инициализируем колоды (Shuffle Bags)
-                initDecks(db);
-
-                // Анимация разблокировки
-                lockScreen.style.transform = 'scale(1.5)';
-                lockScreen.style.opacity = '0';
-                setTimeout(() => {
-                    lockScreen.style.display = 'none';
-                    appScreen.style.display = 'flex';
-                    setTimeout(() => appScreen.style.opacity = '1', 50);
-                }, 500);
-
-            } catch (error) {
-                // ПИН неверный (хэш не сошелся)
-                pinDots.classList.add('error-shake');
-                setTimeout(() => {
-                    pinDots.classList.remove('error-shake');
-                    currentPin = "";
-                    pinDots.innerText = "";
-                }, 400);
+                database = JSON.parse(decryptedText);
+                initializePools();
+                return true;
+            } catch (e) {
+                return false;
             }
         }
 
-        // Подготовка колод для алгоритма Gacha
-        function initDecks(database) {
-            originalDecks = {
-                common: database.filter(i => i.rarity === 'common'),
-                rare: database.filter(i => i.rarity === 'rare'),
-                legendary: database.filter(i => i.rarity === 'legendary')
-            };
-            activeDecks = {
-                common: [...originalDecks.common],
-                rare: [...originalDecks.rare],
-                legendary: [...originalDecks.legendary]
-            };
+        function initializePools() {
+            commonPool = [...database.filter(item => item.rarity === 'common')];
+            rarePool = [...database.filter(item => item.rarity === 'rare')];
+            legendaryPool = [...database.filter(item => item.rarity === 'legendary')];
+
+            shuffle(commonPool);
+            shuffle(rarePool);
+            shuffle(legendaryPool);
         }
 
-        // Логика нажатия на "Открыть кейс"
-        document.getElementById('btn-rescue').addEventListener('click', () => {
-            const roll = Math.random() * 100;
-            let rolledRarity = 'common';
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
 
-            // Проверка на наличие ассетов (Fail-Safe)
-            if (roll > 95 && originalDecks.legendary.length > 0) rolledRarity = 'legendary';
-            else if (roll > 70 && originalDecks.rare.length > 0) rolledRarity = 'rare';
+        // --- ЛОГИКА ГАЧИ (УЛУЧШЕННАЯ) ---
+        const dropArea = document.getElementById('drop-area');
 
-            // Перезарядка пустой колоды
-            if (activeDecks[rolledRarity].length === 0) {
-                activeDecks[rolledRarity] = [...originalDecks[rolledRarity]];
+        function openCase() {
+            const roll = Math.random();
+            let selectedRarity;
+            let currentPool;
+
+            // --- ОБРАБОТКА PITY (ГАРАНТА) ---
+            if (commonStreakCount >= 5) {
+                // Если выпало 5 раз Common подряд, 6-й раз БУДЕТ Rare
+                selectedRarity = 'rare';
+                currentPool = rarePool;
+                commonStreakCount = 0; // Сбрасываем гарант
+                console.log("Pity Triggered: Guaranteed Rare!");
+            } else {
+                // ОБЫЧНЫЙ РОЛЛ (РАНДОМ)
+                if (roll < 0.05) { // 5% Legend
+                    selectedRarity = 'legendary';
+                    currentPool = legendaryPool;
+                    commonStreakCount = 0; // Сбрасываем счётчик т.к. выпало не Common
+                } else if (roll < 0.30) { // 25% Rare (или чаще если Pity)
+                    selectedRarity = 'rare';
+                    currentPool = rarePool;
+                    commonStreakCount = 0; // Сбрасываем счётчик т.к. выпало не Common
+                } else { // 70% Common
+                    selectedRarity = 'common';
+                    currentPool = commonPool;
+                    commonStreakCount++; // Увеличиваем счётчик
+                    console.log(`Common Streak: ${commonStreakCount}/5`);
+                }
             }
 
-            const randomIndex = Math.floor(Math.random() * activeDecks[rolledRarity].length);
-            const drop = activeDecks[rolledRarity][randomIndex];
+            // --- ПРОВЕРКА ПУЛА ---
+            // Если в пуле ничего нет (она открыла всё из этой категории)
+            if (currentPool.length === 0) {
+                dropArea.innerHTML = `<div style="color:var(--text-color)">В этой категории контент закончился... Попробуй снова.</div>`;
+                // Перезаполняем пул из базы, чтобы можно было крутить дальше
+                if (selectedRarity === 'common') commonPool = [...database.filter(item => item.rarity === 'common')]; shuffle(commonPool);
+                if (selectedRarity === 'rare') rarePool = [...database.filter(item => item.rarity === 'rare')]; shuffle(rarePool);
+                if (selectedRarity === 'legendary') legendaryPool = [...database.filter(item => item.rarity === 'legendary')]; shuffle(legendaryPool);
+                return;
+            }
 
-            // Удаляем карту из активной колоды, чтобы избежать повторов
-            activeDecks[rolledRarity].splice(randomIndex, 1);
+            const droppedItem = currentPool.pop();
+            renderDrop(droppedItem);
+        }
 
-            renderDrop(drop, rolledRarity);
-        });
+        function renderDrop(item) {
+            dropArea.innerHTML = ''; // Очищаем старый дроп
 
-        // Отрисовка контента
-        function renderDrop(drop, rarity) {
-            document.querySelectorAll('.media-item').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('audio, video').forEach(el => el.pause());
+            const rarityTag = document.createElement('div');
+            rarityTag.className = `rarity-tag rarity-${item.rarity}`;
+            rarityTag.textContent = item.rarity;
+            if (item.rarity === 'common') rarityTag.style.color = 'var(--rarity-common)';
+            if (item.rarity === 'rare') rarityTag.style.color = 'var(--rarity-rare)';
+            if (item.rarity === 'legendary') rarityTag.style.color = 'var(--rarity-legendary)';
+            dropArea.appendChild(rarityTag);
 
-            document.getElementById('message-text').innerText = drop.content;
-
-            const badge = document.getElementById('rarity-badge');
-            badge.className = `rarity-label ${rarity}`;
-            badge.innerText = rarity;
-            badge.style.display = 'inline-block';
-
-            if (drop.type === 'image') {
-                const img = document.getElementById('media-img');
-                img.src = drop.url; img.style.display = 'block';
-            } else if (drop.type === 'audio') {
-                const audio = document.getElementById('media-audio');
-                audio.src = drop.url; audio.style.display = 'block';
-                audio.play().catch(() => { });
-            } else if (drop.type === 'video') {
-                const video = document.getElementById('media-video');
-                video.src = drop.url; video.style.display = 'block';
-                video.muted = false; video.play().catch(() => { });
+            if (item.type === 'text') {
+                const textDiv = document.createElement('div');
+                textDiv.className = 'drop-text'; // Применяем крупный шрифт
+                textDiv.textContent = item.content;
+                dropArea.appendChild(textDiv);
+            } else if (item.type === 'audio') {
+                const mediaContainer = document.createElement('div');
+                mediaContainer.className = 'media-container';
+                mediaContainer.innerHTML = `
+                    <div class="drop-text" style="font-size:1.3rem; font-style:italic;">${item.content}</div>
+                    <audio controls src="${item.url}"></audio>
+                `;
+                dropArea.appendChild(mediaContainer);
+            } else if (item.type === 'video') {
+                const mediaContainer = document.createElement('div');
+                mediaContainer.className = 'media-container';
+                mediaContainer.innerHTML = `
+                    <div class="drop-text" style="font-size:1.3rem; font-style:italic;">${item.content}</div>
+                    <video controls autoplay muted src="${item.url}" style="outline:none; border-radius:8px;"></video>
+                `;
+                dropArea.appendChild(mediaContainer);
+            } else if (item.type === 'image') {
+                const mediaContainer = document.createElement('div');
+                mediaContainer.className = 'media-container';
+                mediaContainer.innerHTML = `
+                    <div class="drop-text" style="font-size:1.3rem; font-style:italic;">${item.content}</div>
+                    <img src="${item.url}" style="width:100%; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.3)"></img>
+                `;
+                dropArea.appendChild(mediaContainer);
             }
         }
     </script>
